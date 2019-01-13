@@ -22,7 +22,10 @@
     "autoload": {
         "psr-4": {
             "OpxCore\\Config\\": "src"
-        }
+        },
+        "files": [
+            "src/helpers.php"
+        ]
     },
     "extra": {
         "branch-alias": {
