@@ -117,9 +117,11 @@ class Config implements ConfigInterface, \ArrayAccess
      */
     private function loadEnv(): void
     {
-        $environment = Dotenv::create($this->envPaths, $this->envFilename);
+        if(file_exists($this->envPaths . DIRECTORY_SEPARATOR. $this->envFilename)) {
+            $environment = Dotenv::create($this->envPaths, $this->envFilename);
 
-        $environment->load();
+            $environment->load();
+        }
     }
 
     /**
