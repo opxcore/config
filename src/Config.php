@@ -74,7 +74,7 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
         $loaded = $this->configRepository->load($this->config, $profile);
 
         // Conditionally make cache for config
-        if ($loaded && isset($this->cacheRepository)) {
+        if ($loaded && $cacheEnabled && isset($this->cacheRepository)) {
             $this->cacheRepository->save($this->config, $profile);
         }
 
