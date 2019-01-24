@@ -16,6 +16,7 @@
   "require": {
     "php": "^7.1.3",
     "opxcore/interfaces": "^0.1",
+    "opxcore/config-environment": "^0.1",
     "opxcore/array": "^1.0"
   },
   "require-dev": {

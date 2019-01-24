@@ -3,9 +3,25 @@
 namespace OpxCore\Config;
 
 use OpxCore\Arr\Arr;
+use OpxCore\Interfaces\ConfigCacheRepositoryInterface;
+use OpxCore\Interfaces\ConfigRepositoryInterface;
 
 class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
 {
+    /**
+     * Config repository.
+     *
+     * @var  ConfigRepositoryInterface|null
+     */
+    protected $configRepository;
+
+    /**
+     * Config cache repository.
+     *
+     * @var  ConfigCacheRepositoryInterface
+     */
+    protected $cacheRepository;
+
     /**
      * All configurations.
      *
@@ -14,13 +30,55 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
     protected $config = [];
 
     /**
+     * Is config loaded from cache.
+     *
+     * @var  bool
+     */
+    protected $cached = false;
+
+    /**
      * Config constructor.
      *
-     * @param  array $config
+     * @param  ConfigRepositoryInterface|null $repository
+     * @param  ConfigCacheRepositoryInterface|null $cacheRepository
      */
-    public function __construct($config)
+    public function __construct(ConfigRepositoryInterface $repository = null, ConfigCacheRepositoryInterface $cacheRepository = null)
     {
-        $this->config = $config;
+        $this->configRepository = $repository;
+        $this->cacheRepository = $cacheRepository;
+    }
+
+    /**
+     * Load configuration.
+     *
+     * @param  string|null $profile
+     * @param  bool $force
+     *
+     * @return  bool
+     */
+    public function load($profile = null, $force = false): bool
+    {
+        $cacheEnabled = env('CONFIG_CACHE_DISABLE', false) === false;
+
+        // Try to load config from cache first if this option is enabled and driver
+        // for config cache was bind.
+        if (!$force && $cacheEnabled && isset($this->cacheRepository)) {
+
+            $this->cached = $this->cacheRepository->load($this->config, $profile);
+        }
+
+        if($this->cached || !isset($this->configRepository)) {
+            return $this->cached;
+        }
+
+        $loaded = $this->configRepository->load($this->config, $profile);
+
+        // Conditionally make cache for config
+        if ($loaded && isset($this->cacheRepository)) {
+            $this->cacheRepository->save($this->config, $profile);
+        }
+
+        return $loaded;
     }
 
     /**
@@ -65,7 +123,7 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
         }
     }
 
-       /**
+    /**
      * Push a value onto an array configuration value.
      *
      * @param  string $key
@@ -124,7 +182,7 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
      *
      * @return  void
      */
-    public function offsetSet($key, $value):void
+    public function offsetSet($key, $value): void
     {
         $this->set($key, $value);
     }
