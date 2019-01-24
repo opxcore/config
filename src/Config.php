@@ -109,7 +109,7 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
     /**
      * Set a given configuration value.
      *
-     * @param  array|string $key
+     * @param  array|string|null $key
      * @param  mixed $value
      *
      * @return  void
