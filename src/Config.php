@@ -1,81 +1,111 @@
 <?php
+/*
+ * This file is part of the OpxCore.
+ *
+ * Copyright (c) Lozovoy Vyacheslav <opxcore@gmail.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
 
 namespace OpxCore\Config;
 
+use ArrayAccess;
 use OpxCore\Arr\Arr;
-use OpxCore\Interfaces\ConfigCacheRepositoryInterface;
-use OpxCore\Interfaces\ConfigRepositoryInterface;
+use OpxCore\Config\Interfaces\ConfigInterface;
+use OpxCore\Config\Interfaces\ConfigRepositoryInterface;
+use OpxCore\Config\Interfaces\ConfigCacheInterface;
+use OpxCore\Config\Interfaces\EnvironmentInterface;
 
-class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
+class Config implements ConfigInterface, ArrayAccess
 {
     /**
-     * Config repository.
+     * Config repository driver.
      *
-     * @var  ConfigRepositoryInterface|null
+     * @var ConfigRepositoryInterface|null
      */
-    protected $configRepository;
+    protected ?ConfigRepositoryInterface $configRepository;
 
     /**
-     * Config cache repository.
+     * Config cache repository driver.
      *
-     * @var  ConfigCacheRepositoryInterface
+     * @var ConfigCacheInterface|null
      */
-    protected $cacheRepository;
+    protected ?ConfigCacheInterface $cacheRepository;
+
+    /**
+     * Environment driver.
+     *
+     * @var EnvironmentInterface|null
+     */
+    protected ?EnvironmentInterface $environment;
 
     /**
      * All configurations.
      *
      * @var  array
      */
-    protected $config = [];
+    protected array $config = [];
 
     /**
      * Is config loaded from cache.
      *
      * @var  bool
      */
-    protected $cached = false;
+    protected bool $cached = false;
 
     /**
      * Config constructor.
      *
-     * @param  ConfigRepositoryInterface|null $repository
-     * @param  ConfigCacheRepositoryInterface|null $cacheRepository
+     * @param ConfigRepositoryInterface|null $repository
+     * @param ConfigCacheInterface|null $cache
+     * @param EnvironmentInterface|null $environment
      */
-    public function __construct(ConfigRepositoryInterface $repository = null, ConfigCacheRepositoryInterface $cacheRepository = null)
+    public function __construct(?ConfigRepositoryInterface $repository = null, ?ConfigCacheInterface $cache = null, ?EnvironmentInterface $environment = null)
     {
         $this->configRepository = $repository;
-        $this->cacheRepository = $cacheRepository;
+        $this->cacheRepository = $cache;
+        $this->environment = $environment;
     }
 
     /**
      * Load configuration.
      *
-     * @param  string|null $profile
-     * @param  bool $force
+     * @param string|null $profile
+     * @param string|null $overrides
+     * @param bool $force Set to true to skip loading from cache
      *
      * @return  bool
      */
-    public function load($profile = null, $force = false): bool
+    public function load(?string $profile = null, ?string $overrides = null, bool $force = false): bool
     {
-        $cacheEnabled = env('CONFIG_CACHE_DISABLE', false) === false;
+        $cacheEnabled = true;
 
-        // Try to load config from cache first if this option is enabled and driver
-        // for config cache was bind.
+        // Check if cache for config is not disabled by environment.
+        if ($this->environment !== null) {
+            $cacheEnabled = $this->environment->get('CONFIG_CACHE_ENABLE', true) === true;
+        }
+
+        // Try to load config from cache first if force option is not set, cache is not disabled by environment and
+        // config cache was bound.
         if (!$force && $cacheEnabled && isset($this->cacheRepository)) {
 
             $this->cached = $this->cacheRepository->load($this->config, $profile);
         }
 
-        if($this->cached || !isset($this->configRepository)) {
+        // If config was loaded from cache successfully no need to do anything else.
+        if ($this->cached || !isset($this->configRepository)) {
             return $this->cached;
         }
 
-        $loaded = $this->configRepository->load($this->config, $profile);
+        // If there is no cached and not expired config load it via config repository.
+        $loaded = $this->configRepository->load($this->config, $profile, $overrides);
 
         // Conditionally make cache for config
         if ($loaded && $cacheEnabled && isset($this->cacheRepository)) {
-            $this->cacheRepository->save($this->config, $profile);
+            // Get TTL from environment or use null (forever)
+            $ttl = $this->environment->get('CONFIG_CACHE_TTL');
+            $this->cacheRepository->save($this->config, $profile, $ttl);
         }
 
         return $loaded;
@@ -84,11 +114,11 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
     /**
      * Determine if the value for given key exists.
      *
-     * @param  string $key
+     * @param string $key
      *
      * @return  bool
      */
-    public function has($key): bool
+    public function has(string $key): bool
     {
         return Arr::has($this->config, $key);
     }
@@ -96,12 +126,12 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
     /**
      * Get the specified configuration value.
      *
-     * @param  string $key
-     * @param  mixed $default
+     * @param string $key
+     * @param mixed $default
      *
      * @return  mixed
      */
-    public function get($key, $default = null)
+    public function get(string $key, $default = null)
     {
         return Arr::get($this->config, $key, $default);
     }
@@ -109,8 +139,8 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
     /**
      * Set a given configuration value.
      *
-     * @param  array|string|null $key
-     * @param  mixed $value
+     * @param array|string|null $key
+     * @param mixed $value
      *
      * @return  void
      */
@@ -126,12 +156,12 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
     /**
      * Push a value onto an array configuration value.
      *
-     * @param  string $key
-     * @param  mixed $value
+     * @param string $key
+     * @param mixed $value
      *
      * @return  void
      */
-    public function push($key, $value): void
+    public function push(string $key, $value): void
     {
         $array = $this->get($key);
 
@@ -153,49 +183,49 @@ class Config implements \OpxCore\Interfaces\ConfigInterface, \ArrayAccess
     /**
      * Determine if the given configuration option exists.
      *
-     * @param  string $key
+     * @param $offset
      *
      * @return  bool
      */
-    public function offsetExists($key): bool
+    public function offsetExists($offset): bool
     {
-        return $this->has($key);
+        return $this->has($offset);
     }
 
     /**
      * Get a configuration option.
      *
-     * @param  string $key
+     * @param $offset
      *
      * @return  mixed
      */
-    public function offsetGet($key)
+    public function offsetGet($offset)
     {
-        return $this->get($key);
+        return $this->get($offset);
     }
 
     /**
      * Set a configuration option.
      *
-     * @param  string $key
-     * @param  mixed $value
+     * @param $offset
+     * @param mixed $value
      *
      * @return  void
      */
-    public function offsetSet($key, $value): void
+    public function offsetSet($offset, $value): void
     {
-        $this->set($key, $value);
+        $this->set($offset, $value);
     }
 
     /**
      * Unset a configuration option.
      *
-     * @param  string $key
+     * @param $offset
      *
      * @return  void
      */
-    public function offsetUnset($key): void
+    public function offsetUnset($offset): void
     {
-        Arr::forget($this->config, $key);
+        Arr::forget($this->config, $offset);
     }
 }
