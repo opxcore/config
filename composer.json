@@ -2,7 +2,7 @@
   "name": "opxcore/config",
   "description": "The OpxCore config.",
   "license": "MIT",
-  "homepage": "https://opxcms.com",
+  "homepage": "https://opxcore.com",
   "support": {
     "issues": "https://github.com/opxcore/config/issues",
     "source": "https://github.com/opxcore/config"
@@ -14,23 +14,24 @@
     }
   ],
   "require": {
-    "php": "^7.1.3",
-    "opxcore/interfaces": "^0.1",
-    "opxcore/config-environment": "^0.1",
-    "opxcore/array": "^1.0"
+    "php": "^7.4",
+    "opxcore/config-interface": "^1.0.1",
+    "opxcore/config-cache-interface": "^1.0.0",
+    "opxcore/config-repository-interface": "^1.0.0",
+    "opxcore/config-environment-interface": "^1.0.0",
+    "opxcore/array": "^1.0.0"
   },
   "require-dev": {
+    "phpunit/phpunit": "^9.5"
   },
   "autoload": {
     "psr-4": {
-      "OpxCore\\Config\\": "src"
-    },
-    "files": [
-    ]
+      "OpxCore\\Config\\": "src/"
+    }
   },
-  "extra": {
-    "branch-alias": {
-      "dev-master": "0.2.2-dev"
+  "autoload-dev": {
+    "psr-4": {
+      "OpxCore\\Tests\\Config\\": "tests/"
     }
   },
   "minimum-stability": "dev",
