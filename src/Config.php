@@ -108,7 +108,7 @@ class Config implements ConfigInterface, ArrayAccess
 
         // If there is no cached and not expired config load it via config repository.
         try {
-            $loaded = $this->repository->load($this->config, $profile, $overrides);
+            $loaded = $this->repository ? $this->repository->load($this->config, $profile, $overrides) : true;
         } catch (ConfigRepositoryException $e) {
             throw new ConfigException("Configuration repository error: {$e->getMessage()}");
         }
