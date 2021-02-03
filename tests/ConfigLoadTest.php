@@ -11,7 +11,6 @@
 namespace OpxCore\Tests\Config;
 
 use OpxCore\Config\Config;
-use OpxCore\Config\Exceptions\ConfigException;
 use OpxCore\Tests\Config\Fixtures\Cache;
 use OpxCore\Tests\Config\Fixtures\Repo;
 use OpxCore\Tests\Config\Fixtures\Env;
@@ -63,6 +62,22 @@ class ConfigLoadTest extends TestCase
         self::assertTrue($config->load());
         self::assertEquals('cached', $config['app.name']);
         self::assertEquals('cached', $config->get('app.name'));
+    }
+
+    /**
+     * Cache is ok, no env, load from cache
+     */
+    public function testCacheExpiredNoEnv(): void
+    {
+        $repo = new Repo(['app' => ['name' => 'test']]);
+        $cache = new Cache();
+        $cache->config = ['app' => ['name' => 'cached']];
+        $cache->expired = true;
+
+        $config = new Config($repo, $cache,);
+
+        self::assertTrue($config->load());
+        self::assertEquals('test', $config['app.name']);
     }
 
     /**

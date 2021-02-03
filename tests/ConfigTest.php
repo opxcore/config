@@ -11,10 +11,7 @@
 namespace OpxCore\Tests\Config;
 
 use OpxCore\Config\Config;
-use OpxCore\Config\Exceptions\ConfigException;
-use OpxCore\Tests\Config\Fixtures\Cache;
 use OpxCore\Tests\Config\Fixtures\Repo;
-use OpxCore\Tests\Config\Fixtures\Env;
 use PHPUnit\Framework\TestCase;
 
 class ConfigTest extends TestCase
