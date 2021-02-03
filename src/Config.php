@@ -12,6 +12,9 @@ namespace OpxCore\Config;
 
 use ArrayAccess;
 use OpxCore\Arr\Arr;
+use OpxCore\Config\Exceptions\ConfigCacheException;
+use OpxCore\Config\Exceptions\ConfigException;
+use OpxCore\Config\Exceptions\ConfigRepositoryException;
 use OpxCore\Config\Interfaces\ConfigInterface;
 use OpxCore\Config\Interfaces\ConfigRepositoryInterface;
 use OpxCore\Config\Interfaces\ConfigCacheInterface;
@@ -24,14 +27,14 @@ class Config implements ConfigInterface, ArrayAccess
      *
      * @var ConfigRepositoryInterface|null
      */
-    protected ?ConfigRepositoryInterface $configRepository;
+    protected ?ConfigRepositoryInterface $repository;
 
     /**
      * Config cache repository driver.
      *
      * @var ConfigCacheInterface|null
      */
-    protected ?ConfigCacheInterface $cacheRepository;
+    protected ?ConfigCacheInterface $cache;
 
     /**
      * Environment driver.
@@ -63,8 +66,8 @@ class Config implements ConfigInterface, ArrayAccess
      */
     public function __construct(?ConfigRepositoryInterface $repository = null, ?ConfigCacheInterface $cache = null, ?EnvironmentInterface $environment = null)
     {
-        $this->configRepository = $repository;
-        $this->cacheRepository = $cache;
+        $this->repository = $repository;
+        $this->cache = $cache;
         $this->environment = $environment;
     }
 
@@ -76,6 +79,7 @@ class Config implements ConfigInterface, ArrayAccess
      * @param bool $force Set to true to skip loading from cache
      *
      * @return  bool
+     * @throws  ConfigException
      */
     public function load(?string $profile = null, ?string $overrides = null, bool $force = false): bool
     {
@@ -88,24 +92,37 @@ class Config implements ConfigInterface, ArrayAccess
 
         // Try to load config from cache first if force option is not set, cache is not disabled by environment and
         // config cache was bound.
-        if (!$force && $cacheEnabled && isset($this->cacheRepository)) {
+        if (!$force && $cacheEnabled && isset($this->cache)) {
+            try {
+                $this->cached = $this->cache->load($this->config, $profile);
 
-            $this->cached = $this->cacheRepository->load($this->config, $profile);
+            } catch (ConfigCacheException $e) {
+                throw new ConfigException("Configuration cache error: {$e->getMessage()}");
+            }
         }
 
         // If config was loaded from cache successfully no need to do anything else.
-        if ($this->cached || !isset($this->configRepository)) {
+        if ($this->cached || !isset($this->repository)) {
             return $this->cached;
         }
 
         // If there is no cached and not expired config load it via config repository.
-        $loaded = $this->configRepository->load($this->config, $profile, $overrides);
+        try {
+            $loaded = $this->repository->load($this->config, $profile, $overrides);
+        } catch (ConfigRepositoryException $e) {
+            throw new ConfigException("Configuration repository error: {$e->getMessage()}");
+        }
 
         // Conditionally make cache for config
-        if ($loaded && $cacheEnabled && isset($this->cacheRepository)) {
+        if ($loaded && $cacheEnabled && isset($this->cache)) {
             // Get TTL from environment or use null (forever)
-            $ttl = $this->environment->get('CONFIG_CACHE_TTL');
-            $this->cacheRepository->save($this->config, $profile, $ttl);
+            $ttl = $this->environment ? $this->environment->get('CONFIG_CACHE_TTL') : null;
+            try {
+                $this->cache->save($this->config, $profile, $ttl);
+
+            } catch (ConfigCacheException $e) {
+                throw new ConfigException("Configuration cache error: {$e->getMessage()}");
+            }
         }
 
         return $loaded;
