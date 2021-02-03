@@ -16,8 +16,8 @@
   "require": {
     "php": "^7.4",
     "opxcore/config-interface": "^1.0.1",
-    "opxcore/config-cache-interface": "^1.0.0",
-    "opxcore/config-repository-interface": "^1.0.0",
+    "opxcore/config-cache-interface": "^1.0.1",
+    "opxcore/config-repository-interface": "^1.0.2",
     "opxcore/config-environment-interface": "^1.0.0",
     "opxcore/array": "^1.0.0"
   },
