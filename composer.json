@@ -2,6 +2,7 @@
   "name": "opxcore/config",
   "description": "The OpxCore config.",
   "license": "MIT",
+  "type": "library",
   "homepage": "https://opxcore.com",
   "support": {
     "issues": "https://github.com/opxcore/config/issues",
