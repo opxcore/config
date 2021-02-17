@@ -97,7 +97,7 @@ class Config implements ConfigInterface, ArrayAccess
                 $this->cached = $this->cache->load($this->config, $profile);
 
             } catch (ConfigCacheException $e) {
-                throw new ConfigException("Configuration cache error: {$e->getMessage()}");
+                throw new ConfigException("Configuration cache error: {$e->getMessage()}", 0, $e);
             }
         }
 
@@ -110,7 +110,7 @@ class Config implements ConfigInterface, ArrayAccess
         try {
             $loaded = $this->repository ? $this->repository->load($this->config, $profile, $overrides) : true;
         } catch (ConfigRepositoryException $e) {
-            throw new ConfigException("Configuration repository error: {$e->getMessage()}");
+            throw new ConfigException("Configuration repository error: {$e->getMessage()}", 0, $e);
         }
 
         // Conditionally make cache for config
@@ -121,7 +121,7 @@ class Config implements ConfigInterface, ArrayAccess
                 $this->cache->save($this->config, $profile, $ttl);
 
             } catch (ConfigCacheException $e) {
-                throw new ConfigException("Configuration cache error: {$e->getMessage()}");
+                throw new ConfigException("Configuration cache error: {$e->getMessage()}", 0, $e);
             }
         }
 
